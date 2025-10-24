@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import * as tripay from '../lib/tripay';
-import { apiKeyAuthMiddleware, AuthRequest } from '../middleware/auth';
-import { createAndUploadInvoice } from '../lib/invoice';
-import { sendEmail, getPaymentSuccessEmail } from '../lib/email';
+import * as tripay from '../lib/tripay.js';
+import { apiKeyAuthMiddleware, AuthRequest } from '../middleware/auth.js';
+import { createAndUploadInvoice } from '../lib/invoice.js';
+import { sendEmail, getPaymentSuccessEmail } from '../lib/email.js';
 
 const router = Router();
 
