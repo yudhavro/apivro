@@ -428,6 +428,8 @@ return [{
      }
      ```
 
+**Ganti `YOUR_DEEPSEEK_API_KEY` dengan API key Anda yang sebenarnya!**
+
 #### **Gemini Node (Output 2):**
 1. **Klik "+"** di Output 2 dari Switch
 2. **Cari "HTTP Request"**
@@ -453,6 +455,8 @@ return [{
        }
      }
      ```
+
+**Ganti `YOUR_GEMINI_API_KEY` dengan API key Anda yang sebenarnya!**
 
 ---
 
@@ -620,27 +624,6 @@ return [{
 **Setup:**
 1. **Ganti `YOUR_TELEGRAM_CHAT_ID`** dengan chat ID Anda
 2. **Ganti `YOUR_TELEGRAM_BOT_TOKEN`** dengan bot token Anda
-
----
-
-### **📋 Setup Telegram Bot**
-
-#### **Step 1: Buat Bot**
-1. **Chat @BotFather** di Telegram
-2. **Ketik:** `/newbot`
-3. **Ikuti instruksi**
-4. **Copy Bot Token**
-
-#### **Step 2: Get Chat ID**
-1. **Chat dengan bot** Anda
-2. **Kirim pesan apa saja**
-3. **Buka:** https://api.telegram.org/botYOUR_BOT_TOKEN/getUpdates
-4. **Copy "chat"."id"**
-
-#### **Step 3: Setup Webhook**
-1. **Copy webhook URL** dari Telegram node
-2. **Paste di API VRO device**
-3. **Test**
 
 ---
 
