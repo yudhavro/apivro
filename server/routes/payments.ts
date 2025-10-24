@@ -16,6 +16,43 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Payment channels configuration
+const PAYMENT_CHANNELS = [
+  { code: 'BRIVA', name: 'BRI Virtual Account', group: 'Virtual Account', fee_merchant: 4000, fee_customer: 4000 },
+  { code: 'BNIVA', name: 'BNI Virtual Account', group: 'Virtual Account', fee_merchant: 4000, fee_customer: 4000 },
+  { code: 'MANDIRIVA', name: 'Mandiri Virtual Account', group: 'Virtual Account', fee_merchant: 4000, fee_customer: 4000 },
+  { code: 'PERMATAVA', name: 'Permata Virtual Account', group: 'Virtual Account', fee_merchant: 4000, fee_customer: 4000 },
+  { code: 'QRIS', name: 'QRIS', group: 'E-Wallet', fee_merchant: 0.7, fee_customer: 0.7 },
+  { code: 'SHOPEEPAY', name: 'ShopeePay', group: 'E-Wallet', fee_merchant: 2, fee_customer: 2 },
+  { code: 'ALFAMART', name: 'Alfamart', group: 'Convenience Store', fee_merchant: 5000, fee_customer: 5000 },
+  { code: 'INDOMARET', name: 'Indomaret', group: 'Convenience Store', fee_merchant: 5000, fee_customer: 5000 },
+];
+
+// Calculate payment fee based on method and amount
+function calculateFee(paymentMethod: string, amount: number): { fee: number; total: number } {
+  const channel = PAYMENT_CHANNELS.find(c => c.code === paymentMethod);
+  
+  if (!channel) {
+    // Default fee if channel not found
+    return { fee: 0, total: amount };
+  }
+
+  let fee = 0;
+  
+  // Calculate fee based on type (percentage or flat)
+  if (channel.fee_customer < 100) {
+    // Percentage fee
+    fee = Math.ceil(amount * (channel.fee_customer / 100));
+  } else {
+    // Flat fee
+    fee = channel.fee_customer;
+  }
+
+  const total = amount + fee;
+  
+  return { fee, total };
+}
+
 /**
  * GET /api/v1/payments/channels
  * Get available payment channels
