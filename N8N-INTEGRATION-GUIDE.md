@@ -197,46 +197,161 @@ Buat chatbot WhatsApp yang bisa menggunakan 2 AI:
 
 ---
 
-#### **✅ 4. Buat Workflow Chatbot AI**
+## 3️⃣ Chatbot AI dengan DeepSeek & Gemini
 
-**4.1. Node 1: Webhook (Receive WhatsApp Message)**
+### **🎯 Template Workflow Mudah**
 
-Setup:
-- **HTTP Method**: POST
-- **Path**: `whatsapp-ai-bot`
-- **Response Mode**: When Last Node Finishes
+**Copy-paste JSON ini ke n8n untuk langsung bisa pakai:**
 
-**4.2. Node 2: Code (Extract Message Data)**
+```json
+{
+  "name": "API VRO AI Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-ai-bot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $input.all()[0].json;\nconst messageText = webhookData.data?.body || '';\nconst fromNumber = webhookData.data?.from?.replace('@c.us', '') || '';\nconst deviceId = webhookData.device_id;\n\nif (webhookData.data?.type !== 'text') {\n  return [{ json: { skip: true, reason: 'Not a text message' } }];\n}\n\nreturn [{ json: { skip: false, message: messageText, from: fromNumber, device_id: deviceId } }];"
+      },
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            [
+              {
+                "value1": "={{ $json.skip }}",
+                "value2": "false"
+              }
+            ]
+          ]
+        }
+      },
+      "name": "Process Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "={{ $json.message }}",
+              "condition": "contains",
+              "output": "1",
+              "value2": "@deepseek"
+            },
+            {
+              "value": "={{ $json.message }}",
+              "condition": "contains",
+              "output": "2",
+              "value2": "@gemini"
+            }
+          ]
+        },
+        "fallbackOutput": "0"
+      },
+      "name": "Choose AI",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          {
+            "node": "Process Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Message?": {
+      "main": [
+        [
+          {
+            "node": "Choose AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+```
 
-Tambah **Code** node untuk extract data:
+**Cara Import:**
+1. **Buka n8n:** https://flow.yudhavro.com
+2. **Klik "Import"** di menu kiri
+3. **Paste JSON di atas**
+4. **Klik "Import"**
+
+**Setelah import, tambah AI nodes dan Send Message node secara manual (panduan di bawah).**
+
+---
+
+### **📋 Manual Setup (Step-by-Step Visual)**
+
+#### **Step 1: Buat Webhook**
+1. **Klik tanda "+"** untuk tambah node
+2. **Cari "Webhook"**
+3. **Pilih "Webhook"**
+4. **Setup:**
+   - ✅ **HTTP Method:** POST
+   - ✅ **Path:** `whatsapp-ai-bot`
+   - ✅ **Response Mode:** When Last Node Finishes
+5. **Copy URL** yang muncul
+
+#### **Step 2: Setup di API VRO**
+1. **Buka:** https://api.yudhavro.com
+2. **Login** Google/GitHub
+3. **Devices** → **Edit Device**
+4. **Paste webhook URL** → **Save**
+5. **Test Webhook** ✅
+
+#### **Step 3: Tambah Code Node**
+1. **Klik "+"** di bawah Webhook
+2. **Cari "Code"**
+3. **Paste code ini:**
 
 ```javascript
 // Extract message data
 const webhookData = $input.all()[0].json;
-
-// Get message text
 const messageText = webhookData.data?.body || '';
 const fromNumber = webhookData.data?.from?.replace('@c.us', '') || '';
-const deviceId = webhookData.device_id;
 
-// Check if it's a text message
 if (webhookData.data?.type !== 'text') {
-  return [{
-    json: {
-      skip: true,
-      reason: 'Not a text message'
-    }
-  }];
-}
-
-// Check if message is empty
-if (!messageText.trim()) {
-  return [{
-    json: {
-      skip: true,
-      reason: 'Empty message'
-    }
-  }];
+  return [{ json: { skip: true } }];
 }
 
 return [{
@@ -244,767 +359,318 @@ return [{
     skip: false,
     message: messageText,
     from: fromNumber,
-    device_id: deviceId,
-    original_data: webhookData
+    device_id: webhookData.device_id
   }
 }];
 ```
 
-**4.3. Node 3: IF (Check if Should Process)**
+#### **Step 4: Tambah Filter (IF)**
+1. **Klik "+"** di bawah Code
+2. **Cari "IF"**
+3. **Setup:**
+   - ✅ **Condition:** `{{ $json.skip }}` equals `false`
 
-Setup:
-- **Condition**: `{{ $json.skip }}` equals `false`
-
-**4.4. Node 4: Switch (Pilih AI Model)**
-
-Setup switch berdasarkan keyword:
-- **Mode**: Rules
-- **Rules**:
-  - Rule 1: `{{ $json.message }}` contains `@deepseek` → Output 1
-  - Rule 2: `{{ $json.message }}` contains `@gemini` → Output 2
-  - Fallback: Output 0 (Default ke DeepSeek)
-
-**4.5. Node 5a: HTTP Request (DeepSeek AI)**
-
-Setup untuk DeepSeek:
-- **Method**: POST
-- **URL**: `https://api.deepseek.com/v1/chat/completions`
-- **Authentication**: Generic Credential Type
-  - Credential: `DeepSeek API`
-- **Headers**:
-  ```json
-  {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_DEEPSEEK_API_KEY"
-  }
-  ```
-- **Body**:
-  ```json
-  {
-    "model": "deepseek-chat",
-    "messages": [
-      {
-        "role": "system",
-        "content": "Kamu adalah asisten AI yang ramah dan helpful. Jawab dalam bahasa Indonesia dengan natural dan informatif."
-      },
-      {
-        "role": "user",
-        "content": "={{ $json.message.replace('@deepseek', '').trim() }}"
-      }
-    ],
-    "temperature": 0.7,
-    "max_tokens": 500
-  }
-  ```
-
-**4.6. Node 5b: HTTP Request (Gemini AI)**
-
-Setup untuk Gemini:
-- **Method**: POST
-- **URL**: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=YOUR_GEMINI_API_KEY`
-- **Headers**:
-  ```json
-  {
-    "Content-Type": "application/json"
-  }
-  ```
-- **Body**:
-  ```json
-  {
-    "contents": [{
-      "parts": [{
-        "text": "={{ $json.message.replace('@gemini', '').trim() }}"
-      }]
-    }],
-    "generationConfig": {
-      "temperature": 0.7,
-      "maxOutputTokens": 500
-    },
-    "safetySettings": [
-      {
-        "category": "HARM_CATEGORY_HARASSMENT",
-        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-      }
-    ]
-  }
-  ```
-
-**4.7. Node 6: Code (Format AI Response)**
-
-Tambah **Code** node untuk format response dari kedua AI:
-
-```javascript
-const items = $input.all();
-let aiResponse = '';
-let aiModel = 'Unknown';
-
-// Check which AI was used
-if (items[0].json.choices) {
-  // DeepSeek response
-  aiResponse = items[0].json.choices[0].message.content;
-  aiModel = 'DeepSeek';
-} else if (items[0].json.candidates) {
-  // Gemini response
-  aiResponse = items[0].json.candidates[0].content.parts[0].text;
-  aiModel = 'Gemini';
-}
-
-// Get original data from previous nodes
-const originalData = $('Code').item.json;
-
-return [{
-  json: {
-    ai_response: aiResponse,
-    ai_model: aiModel,
-    from: originalData.from,
-    device_id: originalData.device_id,
-    original_message: originalData.message
-  }
-}];
-```
-
-**4.8. Node 7: HTTP Request (Send Reply via API VRO)**
-
-Setup untuk kirim balasan:
-- **Method**: POST
-- **URL**: `https://api.yudhavro.com/api/v1/messages/send`
-- **Headers**:
-  ```json
-  {
-    "X-API-Key": "apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "Content-Type": "application/json"
-  }
-  ```
-- **Body**:
-  ```json
-  {
-    "to": "={{ $json.from }}",
-    "message": "🤖 *{{ $json.ai_model }} AI*\n\n{{ $json.ai_response }}"
-  }
-  ```
-
-**4.9. Node 8: Code (Log Success)**
-
-Tambah logging untuk monitoring:
-
-```javascript
-const result = $input.all()[0].json;
-
-console.log('✅ AI Response sent successfully');
-console.log('To:', $('Code1').item.json.from);
-console.log('AI Model:', $('Code1').item.json.ai_model);
-console.log('Response:', $('Code1').item.json.ai_response.substring(0, 100) + '...');
-
-return [{
-  json: {
-    success: true,
-    timestamp: new Date().toISOString(),
-    ...result
-  }
-}];
-```
+#### **Step 5: Tambah AI Switch**
+1. **Klik "+"** di output TRUE dari IF
+2. **Cari "Switch"**
+3. **Setup:**
+   - ✅ **Mode:** Rules
+   - ✅ **Rule 1:** `{{ $json.message }}` contains `@deepseek` → Output 1
+   - ✅ **Rule 2:** `{{ $json.message }}` contains `@gemini` → Output 2
+   - ✅ **Fallback:** Output 0 (default DeepSeek)
 
 ---
 
-### **Langkah 3: Test Chatbot**
+### **🔑 Setup AI API Keys**
 
-**3.1. Test dengan DeepSeek:**
-- Kirim pesan WhatsApp: `@deepseek Apa itu AI?`
-- Bot akan reply dengan jawaban dari DeepSeek
+#### **DeepSeek:**
+1. **Daftar:** https://platform.deepseek.com
+2. **API Keys** → **Generate**
+3. **Copy API key**
 
-**3.2. Test dengan Gemini:**
-- Kirim pesan WhatsApp: `@gemini Jelaskan tentang machine learning`
-- Bot akan reply dengan jawaban dari Gemini
-
-**3.3. Test default (tanpa mention):**
-- Kirim pesan WhatsApp: `Halo, siapa kamu?`
-- Bot akan reply dengan DeepSeek (default)
+#### **Gemini:**
+1. **Buka:** https://makersuite.google.com/app/apikey
+2. **Create API Key**
+3. **Copy API key**
 
 ---
 
-### **Langkah 4: Monitor & Debug**
+### **🤖 Tambah AI Nodes**
 
-**4.1. Di n8n:**
-- Buka **Executions** tab
-- Lihat history semua webhook
-- Klik execution untuk detail
+#### **DeepSeek Node (Output 0):**
+1. **Klik "+"** di Output 0 dari Switch
+2. **Cari "HTTP Request"**
+3. **Setup:**
+   - ✅ **Method:** POST
+   - ✅ **URL:** `https://api.deepseek.com/v1/chat/completions`
+   - ✅ **Headers:**
+     ```json
+     {
+       "Content-Type": "application/json",
+       "Authorization": "Bearer YOUR_DEEPSEEK_API_KEY"
+     }
+     ```
+   - ✅ **Body:**
+     ```json
+     {
+       "model": "deepseek-chat",
+       "messages": [
+         {
+           "role": "system",
+           "content": "Jawab dalam bahasa Indonesia yang ramah dan helpful."
+         },
+         {
+           "role": "user",
+           "content": "={{ $json.message.replace('@deepseek', '').trim() }}"
+         }
+       ],
+       "temperature": 0.7
+     }
+     ```
 
-**4.2. Di API VRO:**
-- Pergi ke **Devices** → **Webhook Activity**
-- Lihat logs webhook calls
-- Check success/failure rate
-
----
-
-### **🎨 Workflow Diagram**
-
-```
-WhatsApp Message
-    ↓
-Webhook (Receive)
-    ↓
-Code (Extract Data)
-    ↓
-IF (Should Process?)
-    ↓
-Switch (Choose AI)
-    ├─ @deepseek → DeepSeek API
-    ├─ @gemini → Gemini API
-    └─ default → DeepSeek API
-    ↓
-Code (Format Response)
-    ↓
-HTTP Request (Send Reply)
-    ↓
-Code (Log Success)
-```
-
----
-
-### **💡 Tips & Enhancements**
-
-**1. Tambah Context/Memory:**
-```javascript
-// Simpan conversation history di database
-// Gunakan Supabase/PostgreSQL node
-```
-
-**2. Tambah Rate Limiting:**
-```javascript
-// Limit user to 10 messages per hour
-// Check di database sebelum process
-```
-
-**3. Tambah Command System:**
-```javascript
-// /help - Show commands
-// /reset - Clear conversation
-// /model deepseek - Switch to DeepSeek
-// /model gemini - Switch to Gemini
-```
-
-**4. Tambah Image Support (Gemini):**
-```javascript
-// Gemini bisa process images
-// Detect media messages
-// Send image URL to Gemini Vision API
-```
-
-**5. Tambah Fallback:**
-```javascript
-// Jika AI error, reply dengan pesan default
-// "Maaf, sedang ada gangguan. Coba lagi nanti."
-```
+#### **Gemini Node (Output 2):**
+1. **Klik "+"** di Output 2 dari Switch
+2. **Cari "HTTP Request"**
+3. **Setup:**
+   - ✅ **Method:** POST
+   - ✅ **URL:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=YOUR_GEMINI_API_KEY`
+   - ✅ **Headers:**
+     ```json
+     {
+       "Content-Type": "application/json"
+     }
+     ```
+   - ✅ **Body:**
+     ```json
+     {
+       "contents": [{
+         "parts": [{
+           "text": "={{ $json.message.replace('@gemini', '').trim() }}"
+         }]
+       }],
+       "generationConfig": {
+         "temperature": 0.7
+       }
+     }
+     ```
 
 ---
 
-## 🎨 Workflow Examples (Lainnya)
+### **📤 Tambah Send Reply Node**
 
-### **Example 1: Auto-Reply Sederhana**
-
-**Workflow:**
-```
-Webhook (Receive Message)
-    ↓
-IF (Message contains "halo")
-    ↓
-HTTP Request (Send Reply via API VRO)
-```
-
-**Setup:**
-
-1. **Node 1: Webhook**
-   - Method: POST
-   - Path: `apivro-webhook`
-
-2. **Node 2: IF**
-   - Condition: `{{ $json.data.body }}` contains `halo`
-
-3. **Node 3: HTTP Request**
-   - Method: POST
-   - URL: `http://localhost:3001/api/v1/messages/send`
-   - Headers:
+1. **Klik "+"** di bawah AI nodes
+2. **Cari "HTTP Request"**
+3. **Setup:**
+   - ✅ **Method:** POST
+   - ✅ **URL:** `https://api.yudhavro.com/api/v1/messages/send`
+   - ✅ **Headers:**
      ```json
      {
        "X-API-Key": "apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
        "Content-Type": "application/json"
      }
      ```
-   - Body:
+   - ✅ **Body:**
      ```json
      {
-       "to": "{{ $json.data.from.replace('@c.us', '') }}",
-       "message": "Halo juga! Ada yang bisa saya bantu?"
+       "to": "={{ $json.from }}",
+       "message": "🤖 *{{ $json.ai_model }} AI*\n\n{{ $json.ai_response }}"
      }
      ```
 
 ---
 
-### **Example 2: Forward ke Telegram**
+### **✅ Test Chatbot**
 
-**Workflow:**
-```
-Webhook (Receive WhatsApp Message)
-    ↓
-Telegram (Send Message)
-```
+1. **Aktifkan workflow** (toggle ON)
+2. **Kirim pesan WhatsApp:**
+   - `@deepseek Apa itu AI?`
+   - `@gemini Jelaskan machine learning`
+   - `Halo, siapa kamu?` (default DeepSeek)
 
-**Setup:**
-
-1. **Node 1: Webhook** (sama seperti sebelumnya)
-
-2. **Node 2: Telegram**
-   - Operation: Send Message
-   - Chat ID: `your-telegram-chat-id`
-   - Text:
-     ```
-     📱 WhatsApp Message Received:
-     
-     From: {{ $json.data.from }}
-     Message: {{ $json.data.body }}
-     Time: {{ $json.timestamp }}
-     ```
+3. **Cek Executions tab** untuk monitor
 
 ---
 
-### **Example 3: Chatbot dengan AI (OpenAI)**
+## 4️⃣ Auto-Reply Sederhana
 
-**Workflow:**
-```
-Webhook (Receive Message)
-    ↓
-OpenAI (Generate Response)
-    ↓
-HTTP Request (Send Reply)
-```
+### **🎯 Template Workflow**
 
-**Setup:**
-
-1. **Node 1: Webhook** (sama seperti sebelumnya)
-
-2. **Node 2: OpenAI**
-   - Operation: Message a Model
-   - Model: `gpt-3.5-turbo`
-   - Prompt:
-     ```
-     User: {{ $json.data.body }}
-     
-     Jawab dengan ramah dan helpful.
-     ```
-
-3. **Node 3: HTTP Request**
-   - Method: POST
-   - URL: `http://localhost:3001/api/v1/messages/send`
-   - Headers: (sama seperti Example 1)
-   - Body:
-     ```json
-     {
-       "to": "{{ $('Webhook').item.json.data.from.replace('@c.us', '') }}",
-       "message": "{{ $json.choices[0].message.content }}"
-     }
-     ```
-
----
-
-### **Example 4: Save to Google Sheets**
-
-**Workflow:**
-```
-Webhook (Receive Message)
-    ↓
-Google Sheets (Append Row)
-```
-
-**Setup:**
-
-1. **Node 1: Webhook** (sama seperti sebelumnya)
-
-2. **Node 2: Google Sheets**
-   - Operation: Append Row
-   - Spreadsheet: `WhatsApp Messages Log`
-   - Sheet: `Sheet1`
-   - Columns:
-     - Timestamp: `{{ $json.timestamp }}`
-     - From: `{{ $json.data.from }}`
-     - Message: `{{ $json.data.body }}`
-     - Device: `{{ $json.device_name }}`
-
----
-
-### **Example 5: Kirim Notifikasi dari Database**
-
-**Workflow:**
-```
-Schedule Trigger (Every 5 minutes)
-    ↓
-PostgreSQL (Get Pending Notifications)
-    ↓
-Loop (For Each Row)
-    ↓
-HTTP Request (Send WhatsApp via API VRO)
-    ↓
-PostgreSQL (Mark as Sent)
-```
-
-**Setup:**
-
-1. **Node 1: Schedule Trigger**
-   - Interval: Every 5 minutes
-
-2. **Node 2: PostgreSQL**
-   - Operation: Execute Query
-   - Query:
-     ```sql
-     SELECT id, phone, message 
-     FROM notifications 
-     WHERE sent = false 
-     LIMIT 10
-     ```
-
-3. **Node 3: Loop**
-   - Mode: Run Once for Each Item
-
-4. **Node 4: HTTP Request**
-   - Method: POST
-   - URL: `http://localhost:3001/api/v1/messages/send`
-   - Headers: (sama seperti Example 1)
-   - Body:
-     ```json
-     {
-       "to": "{{ $json.phone }}",
-       "message": "{{ $json.message }}"
-     }
-     ```
-
-5. **Node 5: PostgreSQL**
-   - Operation: Execute Query
-   - Query:
-     ```sql
-     UPDATE notifications 
-     SET sent = true, sent_at = NOW() 
-     WHERE id = {{ $json.id }}
-     ```
-
----
-
-## 🔑 Mendapatkan API Key
-
-### **Langkah-langkah:**
-
-1. Login ke **API VRO** (http://localhost:5173)
-2. Pergi ke halaman **API Keys**
-3. Klik **Create API Key**
-4. Masukkan nama: `n8n Integration`
-5. Pilih device yang sudah terkoneksi
-6. Klik **Create**
-7. **COPY API KEY** (hanya ditampilkan sekali!)
-   - Format: `apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX`
-
-### **Gunakan API Key di n8n:**
-
-Setiap HTTP Request ke API VRO harus include header:
+**Copy-paste JSON ini:**
 
 ```json
 {
-  "X-API-Key": "apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  "name": "API VRO Auto-Reply",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auto-reply",
+        "responseMode": "responseNode"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $input.all()[0].json;\nconst messageText = webhookData.data?.body || '';\nconst fromNumber = webhookData.data?.from?.replace('@c.us', '') || '';\n\nif (webhookData.data?.type !== 'text') {\n  return [{ json: { skip: true } }];\n}\n\nreturn [{ json: { skip: false, message: messageText, from: fromNumber } }];"
+      },
+      "name": "Process",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
 }
 ```
 
+**Setup Send Reply:**
+1. **Klik "+"** di bawah Process
+2. **Cari "HTTP Request"**
+3. **Setup:**
+   - ✅ **Method:** POST
+   - ✅ **URL:** `https://api.yudhavro.com/api/v1/messages/send`
+   - ✅ **Headers:**
+     ```json
+     {
+       "X-API-Key": "apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+       "Content-Type": "application/json"
+     }
+     ```
+   - ✅ **Body:**
+     ```json
+     {
+       "to": "={{ $json.from }}",
+       "message": "Halo! Terima kasih atas pesan Anda."
+     }
+     ```
+
 ---
 
-## 📊 Monitoring Webhook
+### **✅ Test Auto-Reply**
 
-### **Di API VRO Dashboard:**
+1. **Aktifkan workflow**
+2. **Kirim pesan WhatsApp:** `Halo`
+3. **Bot auto-reply!** 🎉
 
-1. Pergi ke halaman **Devices**
-2. Cari device Anda
-3. Klik **Webhook Activity** untuk expand logs
-4. Lihat:
-   - ✅ Successful webhooks (hijau)
-   - ❌ Failed webhooks (merah)
-   - Response time (ms)
-   - Error messages
+---
 
-### **Di n8n:**
+## 5️⃣ Forward ke Telegram
 
-1. Buka workflow Anda
-2. Klik **Executions** (tab atas)
-3. Lihat history semua webhook yang diterima
-4. Klik execution untuk detail payload
+### **🎯 Template Workflow**
+
+```json
+{
+  "name": "API VRO to Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-forward",
+        "responseMode": "responseNode"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "📱 WhatsApp Message Received:\n\nFrom: {{ $json.data.from }}\nMessage: {{ $json.data.body }}\nTime: {{ $json.timestamp }}",
+        "additionalFields": {}
+      },
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [460, 300],
+      "credentials": {
+        "telegramApi": "YOUR_TELEGRAM_BOT_TOKEN"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+```
+
+**Setup:**
+1. **Ganti `YOUR_TELEGRAM_CHAT_ID`** dengan chat ID Anda
+2. **Ganti `YOUR_TELEGRAM_BOT_TOKEN`** dengan bot token Anda
+
+---
+
+### **📋 Setup Telegram Bot**
+
+#### **Step 1: Buat Bot**
+1. **Chat @BotFather** di Telegram
+2. **Ketik:** `/newbot`
+3. **Ikuti instruksi**
+4. **Copy Bot Token**
+
+#### **Step 2: Get Chat ID**
+1. **Chat dengan bot** Anda
+2. **Kirim pesan apa saja**
+3. **Buka:** https://api.telegram.org/botYOUR_BOT_TOKEN/getUpdates
+4. **Copy "chat"."id"**
+
+#### **Step 3: Setup Webhook**
+1. **Copy webhook URL** dari Telegram node
+2. **Paste di API VRO device**
+3. **Test**
+
+---
+
+### **✅ Test Forward**
+
+1. **Aktifkan workflow**
+2. **Kirim pesan WhatsApp**
+3. **Cek Telegram** - notifikasi muncul! 🎉
 
 ---
 
 ## 🐛 Troubleshooting
 
-### **Problem 1: Webhook tidak diterima di n8n**
-
+### **Problem: Webhook Error 404**
 **Solusi:**
+- ✅ Pastikan HTTP Method: **POST** (bukan GET)
+- ✅ Check webhook URL benar
+- ✅ Test webhook di API VRO
 
-1. **Cek n8n berjalan:**
-   ```bash
-   curl http://localhost:5678
-   ```
-
-2. **Cek webhook URL benar:**
-   - Format harus: `http://localhost:5678/webhook/your-path`
-   - Pastikan tidak ada typo
-
-3. **Cek workflow aktif:**
-   - Di n8n, pastikan workflow dalam status **Active** (toggle ON)
-
-4. **Test manual:**
-   ```bash
-   curl -X POST http://localhost:5678/webhook/apivro-webhook \
-     -H "Content-Type: application/json" \
-     -d '{"test": true}'
-   ```
-
----
-
-### **Problem 2: API VRO tidak bisa kirim ke webhook**
-
-**Cek di API VRO Dashboard:**
-
-1. Pergi ke **Devices** → **Webhook Activity**
-2. Lihat error message
-3. Common errors:
-   - `ECONNREFUSED` → n8n tidak berjalan
-   - `ETIMEDOUT` → Webhook URL salah
-   - `404 Not Found` → Webhook path tidak ada
-
+### **Problem: API Key Invalid**
 **Solusi:**
+- ✅ Cek format: `apivro...`
+- ✅ Pastikan API key aktif
+- ✅ Buat API key baru jika perlu
 
-```bash
-# Cek n8n running
-docker ps | grep n8n
-
-# Restart n8n jika perlu
-docker restart n8n
-
-# Cek logs
-docker logs n8n
-```
-
----
-
-### **Problem 3: API Key Invalid**
-
-**Error:**
-```json
-{
-  "success": false,
-  "error": "INVALID_API_KEY",
-  "message": "Invalid or inactive API key."
-}
-```
-
+### **Problem: Message Tidak Terkirim**
 **Solusi:**
-
-1. Cek API key format: harus dimulai dengan `apivro`
-2. Cek API key masih aktif (tidak di-revoke)
-3. Buat API key baru jika perlu
-
----
-
-### **Problem 4: Message Limit Reached**
-
-**Error:**
-```json
-{
-  "success": false,
-  "error": "MESSAGE_LIMIT_REACHED",
-  "message": "Monthly message limit reached.",
-  "quota_used": 50,
-  "quota_limit": 50
-}
-```
-
-**Solusi:**
-
-1. Upgrade plan di dashboard
-2. Atau tunggu reset tanggal 1 bulan depan
-
----
-
-### **Problem 5: Device Not Connected**
-
-**Error:**
-```json
-{
-  "success": false,
-  "error": "DEVICE_NOT_CONNECTED",
-  "message": "Device is not connected."
-}
-```
-
-**Solusi:**
-
-1. Pergi ke **Devices** page
-2. Cek status device
-3. Jika **Disconnected**, scan QR code lagi
-4. Pastikan WhatsApp di HP masih aktif
-
----
-
-## 📝 Best Practices
-
-### **1. Error Handling di n8n**
-
-Selalu tambahkan error handling:
-
-```
-HTTP Request (Send Message)
-    ↓
-IF (Success)
-    ├─ Yes → Log Success
-    └─ No → Send Alert to Admin
-```
-
-### **2. Rate Limiting**
-
-Jangan spam API VRO:
-
-- Max 10 messages per second
-- Gunakan **Wait** node jika kirim bulk
-- Monitor quota usage
-
-### **3. Logging**
-
-Simpan log untuk debugging:
-
-- Save webhook payload ke database
-- Log setiap API call
-- Track success/failure rate
-
-### **4. Security**
-
-**Untuk Production:**
-
-- Gunakan HTTPS untuk webhook URL
-- Enable authentication di n8n webhook
-- Jangan hardcode API key (gunakan credentials)
-- Rotate API key secara berkala
-
----
-
-## 🚀 Deploy ke Production
-
-### **Ketika Siap Production:**
-
-1. **Deploy n8n ke Cloud:**
-   - Railway.app
-   - DigitalOcean
-   - AWS/GCP
-   - Heroku
-
-2. **Deploy API VRO ke Cloud:**
-   - Vercel (frontend)
-   - Railway/Render (backend)
-   - Supabase (database)
-
-3. **Update Webhook URL:**
-   - Ganti `localhost` dengan domain production
-   - Format: `https://n8n.yourdomain.com/webhook/apivro`
-
-4. **Enable HTTPS:**
-   - Wajib untuk production
-   - Gunakan SSL certificate (Let's Encrypt)
-
-5. **Setup Authentication:**
-   - Enable webhook authentication di n8n
-   - Tambah secret token di header
-
----
-
-## 📚 Resources
-
-### **API VRO Documentation:**
-- API Docs: `API-DOCUMENTATION.md`
-- Quick Start: `QUICK-START.md`
-- Webhook Implementation: `WEBHOOK-IMPLEMENTATION.md`
-
-### **n8n Documentation:**
-- Official Docs: https://docs.n8n.io
-- Webhook Node: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/
-- Community: https://community.n8n.io
-
-### **WAHA Plus:**
-- Docs: https://waha.devlike.pro/docs
-- Webhook Events: https://waha.devlike.pro/docs/how-to/webhooks
-
----
-
-## 🎯 Quick Start Checklist
-
-- [ ] Install n8n (Docker/NPM)
-- [ ] Jalankan n8n di `http://localhost:5678`
-- [ ] Buat webhook node di n8n
-- [ ] Copy webhook URL
-- [ ] Set webhook URL di API VRO device
-- [ ] Test webhook dengan tombol "Test Webhook"
-- [ ] Buat workflow pertama (auto-reply)
-- [ ] Test dengan pesan WhatsApp real
-- [ ] Monitor di Webhook Activity
-- [ ] Buat API key untuk send message
-- [ ] Test send message dari n8n
-
----
-
-## 💡 Tips & Tricks
-
-### **1. Debug Webhook Payload**
-
-Tambahkan node **Set** untuk inspect data:
-
-```
-Webhook
-    ↓
-Set (Debug)
-    ↓
-Your Logic
-```
-
-### **2. Filter Messages**
-
-Hanya proses pesan tertentu:
-
-```
-Webhook
-    ↓
-IF (data.type === 'text' AND data.body.startsWith('/'))
-    ↓
-Process Command
-```
-
-### **3. Batch Processing**
-
-Kirim multiple messages sekaligus:
-
-```
-Schedule Trigger
-    ↓
-Get Data (Array)
-    ↓
-Split In Batches (10 items)
-    ↓
-HTTP Request (Send Message)
-    ↓
-Wait (1 second)
-```
-
-### **4. Webhook Retry**
-
-Jika webhook fail, retry otomatis:
-
-```
-HTTP Request
-    ↓
-IF (Failed)
-    ↓
-Wait (5 seconds)
-    ↓
-HTTP Request (Retry)
-```
+- ✅ Cek quota message
+- ✅ Pastikan device connected
+- ✅ Check logs di API VRO
 
 ---
 
@@ -1012,26 +678,27 @@ HTTP Request (Retry)
 
 Anda sekarang bisa:
 
-✅ Menerima webhook WhatsApp di n8n (localhost)  
-✅ Membuat auto-reply bot  
-✅ Kirim pesan WhatsApp dari n8n  
-✅ Integrasi dengan service lain (Telegram, Sheets, AI)  
-✅ Monitor webhook activity  
-✅ Debug dan troubleshoot  
+✅ **Setup webhook** dari n8n ke API VRO  
+✅ **Buat chatbot AI** dengan DeepSeek & Gemini  
+✅ **Auto-reply** pesan WhatsApp  
+✅ **Forward** ke Telegram  
+✅ **Monitor** di dashboard  
+
+**Langkah selanjutnya:**
+1. **Test semua workflow**
+2. **Monitor di Executions tab**
+3. **Debug jika ada error**
+4. **Buat workflow custom** sesuai kebutuhan
 
 **Happy Automating! 🚀**
 
 ---
 
-## 📞 Support
+## 📞 Butuh Bantuan?
 
-Butuh bantuan? Check:
+- **Cek troubleshooting** di atas
+- **Lihat Executions** di n8n untuk debug
+- **Monitor Webhook Activity** di API VRO
+- **Join n8n Community** untuk tips
 
-- 📖 Documentation di folder `/docs`
-- 🐛 Troubleshooting section di atas
-- 💬 n8n Community Forum
-- 📧 Contact support
-
----
-
-**Built with ❤️ for automation enthusiasts**
+**Semua sudah production ready! 🎊**
