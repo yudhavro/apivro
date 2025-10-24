@@ -193,14 +193,22 @@ Expected response:
 
 ### **✅ Langkah 5: Deploy WAHA Plus dengan Docker**
 
-**5.1. Login ke WAHA Docker registry**
+**5.1. Login ke Docker Hub**
+
+Jika Anda sudah donate ke WAHA dan dapat Personal Docker Hub Key:
+
 ```bash
-docker login -u devlikeapro -p YOUR_WAHA_SUBSCRIPTION_KEY cr.waha.devlike.pro
+docker login -u devlikeapro
 ```
 
-Ganti `YOUR_WAHA_SUBSCRIPTION_KEY` dengan key Anda.
+Saat diminta password, **paste Personal Docker Hub Key** Anda (dari email donasi).
 
-**5.2. Pull dan run WAHA Plus**
+**5.2. Pull WAHA Plus dari Docker Hub**
+```bash
+docker pull devlikeapro/waha-plus
+```
+
+**5.3. Run WAHA Plus**
 ```bash
 docker run -d \
   --name waha-plus \
@@ -209,16 +217,22 @@ docker run -d \
   -e WAHA_API_KEY=mysecretkey123 \
   -e WHATSAPP_DEFAULT_ENGINE=WEBJS \
   -v /var/waha_sessions:/app/.sessions \
-  cr.waha.devlike.pro/waha-plus
+  devlikeapro/waha-plus
 ```
 
-**5.3. Verify WAHA running**
+**5.4. Verify WAHA running**
 ```bash
+# Check container status
 docker ps | grep waha
-docker logs waha-plus --tail 20
+
+# Wait for WAHA to fully start (10-30 seconds)
+sleep 15
+
+# Check logs
+docker logs waha-plus --tail 30
 ```
 
-**5.4. Test WAHA API**
+**5.5. Test WAHA API**
 ```bash
 curl -H "X-Api-Key: mysecretkey123" http://localhost:3000/api/sessions
 ```
@@ -228,6 +242,15 @@ Expected response:
 []
 ```
 (Empty array karena belum ada session)
+
+**Note:** Jika Anda belum donate, gunakan WAHA free version:
+```bash
+docker pull devlikeapro/waha
+docker run -d --name waha --restart unless-stopped -p 3000:3000 \
+  -e WHATSAPP_HOOK_EVENTS=* \
+  -v /var/waha_sessions:/app/.waha/sessions \
+  devlikeapro/waha
+```
 
 ---
 
@@ -250,17 +273,17 @@ cp /etc/nginx/sites-enabled/api.yudhavro.com.conf /etc/nginx/sites-enabled/api.y
 nano /etc/nginx/sites-enabled/api.yudhavro.com.conf
 ```
 
-**6.4. Ganti isi file dengan config ini:**
+**6.4. Ganti isi file dengan config ini (HTTP only dulu):**
+
+**PENTING:** Ganti path sesuai dengan folder Anda. Jika folder Anda di `/home/yudhavro-api/htdocs/api.yudhavro.com`, gunakan path tersebut!
+
 ```nginx
 server {
     listen 80;
     listen [::]:80;
     server_name api.yudhavro.com;
     
-    # Redirect HTTP to HTTPS (akan diaktifkan setelah SSL)
-    # return 301 https://$server_name$request_uri;
-    
-    root /home/cloudpanel/htdocs/api.yudhavro.com/dist;
+    root /home/yudhavro-api/htdocs/api.yudhavro.com/dist;
     index index.html;
 
     # Frontend (React SPA)
@@ -301,24 +324,61 @@ Harus muncul: `syntax is ok` dan `test is successful`
 systemctl reload nginx
 ```
 
-**6.7. Test akses domain**
+---
+
+### **✅ Langkah 7: Setup SSL dengan Certbot**
+
+**7.1. Install Certbot**
 ```bash
-curl http://api.yudhavro.com
+apt update
+apt install certbot python3-certbot-nginx -y
 ```
 
-Seharusnya sekarang tidak blank lagi!
+**7.2. Generate SSL Certificate**
+
+Ganti `your-email@gmail.com` dengan email Anda:
+
+```bash
+certbot --nginx -d api.yudhavro.com --non-interactive --agree-tos --email your-email@gmail.com --redirect
+```
+
+Certbot akan:
+- Generate SSL certificate dari Let's Encrypt
+- Otomatis update Nginx config dengan SSL
+- Setup redirect HTTP → HTTPS
+- Setup auto-renewal
+
+**7.3. Verify SSL**
+```bash
+certbot certificates
+```
+
+**7.4. Test Nginx ulang**
+```bash
+nginx -t
+systemctl reload nginx
+```
+
+**7.5. Test HTTPS**
+
+Buka browser: `https://api.yudhavro.com`
+
+Seharusnya sekarang:
+- ✅ SSL active (gembok hijau)
+- ✅ Frontend muncul (tidak blank)
+- ✅ Bisa login
 
 ---
 
-### **✅ Langkah 7: Test Production**
+### **✅ Langkah 8: Test Production**
 
-**7.1. Test frontend**
+**8.1. Test frontend**
 
 Buka browser: `https://api.yudhavro.com`
 
 Seharusnya muncul halaman login API VRO (tidak blank lagi).
 
-**7.2. Test backend health**
+**8.2. Test backend health**
 ```bash
 curl https://api.yudhavro.com/health
 ```
@@ -328,28 +388,32 @@ Expected:
 {"status":"ok","timestamp":"..."}
 ```
 
-**7.3. Test backend API**
+**8.3. Test backend API**
 ```bash
 curl https://api.yudhavro.com/api/v1/health
 ```
 
-**7.4. Login dan test di browser**
+**8.4. Login dan test di browser**
 - Buka `https://api.yudhavro.com`
 - Login dengan Google/GitHub
 - Cek dashboard
-- Test add device (scan QR code)
+- Test add device (scan QR code WhatsApp)
 - Test create API key
+- Test send message
 
-**7.5. Verify semua service running**
+**8.5. Verify semua service running**
 ```bash
-# Check PM2
+# Check PM2 backend
 pm2 status
 
-# Check Docker
+# Check Docker WAHA Plus
 docker ps | grep waha
 
 # Check Nginx
 systemctl status nginx
+
+# Check all ports
+netstat -tulpn | grep -E ':(3000|3001|80|443)'
 ```
 
 ---
