@@ -1,196 +1,148 @@
-# 🚀 Panduan Deployment Production - API VRO
+# 🚀 Panduan Deployment Production - CloudPanel VPS
 
 ## 📋 Daftar Isi
-- [Overview](#overview)
-- [Opsi Deployment](#opsi-deployment)
-- [Opsi 1: CloudPanel VPS (Your Setup)](#opsi-1-cloudpanel-vps-your-setup)
-- [Opsi 2: Railway + Vercel (Recommended)](#opsi-2-railway--vercel-recommended)
-- [Opsi 3: Docker VPS Manual](#opsi-3-docker-vps-manual)
-- [Perbandingan Biaya](#perbandingan-biaya)
-- [Post-Deployment Checklist](#post-deployment-checklist)
+- [Status Saat Ini](#status-saat-ini)
+- [Langkah 1: Install Dependencies](#langkah-1-cek--install-dependencies)
+- [Langkah 2: Masuk ke Folder Project](#langkah-2-masuk-ke-folder-project)
+- [Langkah 3: Install & Build](#langkah-3-install-dependencies--build)
+- [Langkah 4: Setup Backend PM2](#langkah-4-setup-backend-dengan-pm2)
+- [Langkah 5: Deploy WAHA Plus](#langkah-5-deploy-waha-plus-dengan-docker)
+- [Langkah 6: Konfigurasi Nginx](#langkah-6-konfigurasi-nginx-cloudpanel)
+- [Langkah 7: Test Production](#langkah-7-test-production)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## 🎯 Overview
+## 🔧 CloudPanel VPS Production Deployment
 
-Anda sudah punya:
-- ✅ VPS Enterprise dengan CloudPanel
-- ✅ Domain: `api.yudhavro.com` (sudah pointing ke VPS)
-- ✅ File project sudah di-upload ke CloudPanel
+### **Status Saat Ini:**
+- ✅ VPS sudah running dengan CloudPanel
+- ✅ Domain `api.yudhavro.com` sudah pointing ke VPS (160.19.166.145)
+- ✅ File project sudah di-upload ke `/home/cloudpanel/htdocs/api.yudhavro.com/`
+- ✅ File `.env` sudah ada
+- ✅ SSH access sudah OK
+- ⚠️ Domain accessible tapi blank putih (frontend belum di-build)
 
-**Komponen yang perlu di-deploy:**
-1. **Frontend** (React + Vite) → Port 5173
-2. **Backend API** (Express + TypeScript) → Port 3001
-3. **WAHA Plus** (Docker) → Port 3000
-4. **Database** (Supabase) → Sudah cloud ✅
-5. **n8n** (flow.yudhavro.com) → Sudah online ✅
-
----
-
-## 💰 Opsi Deployment
-
-### **Perbandingan Cepat:**
-
-| Opsi | Biaya/Bulan | Setup | Scalability | Recommended |
-|------|-------------|-------|-------------|-------------|
-| **CloudPanel VPS** | Rp 100-500k | Medium | High | ⭐⭐⭐⭐ |
-| **Railway + Vercel** | $5-20 | Easy | Very High | ⭐⭐⭐⭐⭐ |
-| **Docker VPS Manual** | Rp 50-300k | Hard | Medium | ⭐⭐⭐ |
-| **Render.com** | $7-25 | Easy | High | ⭐⭐⭐⭐ |
+### **Yang Perlu Dilakukan:**
+1. Install dependencies (Node.js, PM2, Docker)
+2. Build frontend production
+3. Setup backend dengan PM2
+4. Deploy WAHA Plus dengan Docker
+5. Konfigurasi Nginx
+6. Test production
 
 ---
 
-## 🔧 Opsi 1: CloudPanel VPS (Your Setup)
+## 📋 TODO: Deployment Step-by-Step
 
-### **Keuntungan:**
-- ✅ Full control atas server
-- ✅ Satu VPS untuk semua service
-- ✅ Hemat biaya jangka panjang
-- ✅ Sudah ada CloudPanel (easy management)
+### **✅ Langkah 1: Cek & Install Dependencies**
 
-### **Kekurangan:**
-- ❌ Perlu maintenance sendiri
-- ❌ Setup lebih kompleks
-- ❌ Scaling manual
+Anda sudah login SSH, sekarang cek dan install yang diperlukan:
 
----
-
-### **📋 Setup Step-by-Step**
-
-#### **Langkah 1: Persiapan VPS**
-
-**1.1. Login ke VPS via SSH**
+**1.1. Cek Node.js version**
 ```bash
-ssh root@YOUR_VPS_IP
+node --version
+npm --version
 ```
 
-**1.2. Update sistem**
+Jika belum ada atau versi < 18, install:
 ```bash
-apt update && apt upgrade -y
-```
-
-**1.3. Install dependencies**
-```bash
-# Node.js 18+
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 apt install -y nodejs
+```
 
-# PM2 untuk process manager
+**1.2. Install PM2 (Process Manager)**
+```bash
 npm install -g pm2
+pm2 --version
+```
 
-# Docker (untuk WAHA Plus)
+**1.3. Cek Docker**
+```bash
+docker --version
+```
+
+Jika belum ada, install:
+```bash
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
+systemctl start docker
+systemctl enable docker
 ```
 
 ---
 
-#### **Langkah 2: Setup Domain & SSL**
+### **✅ Langkah 2: Masuk ke Folder Project**
 
-**2.1. Di CloudPanel:**
-- Login ke CloudPanel: `https://YOUR_VPS_IP:8443`
-- Pergi ke **Sites**
-- Klik **Add Site**
-- Domain: `api.yudhavro.com`
-- Type: **Node.js**
-- Node.js Version: **18**
-
-**2.2. Setup SSL (Let's Encrypt):**
-- Di site settings, klik **SSL/TLS**
-- Pilih **Let's Encrypt**
-- Klik **Issue Certificate**
-- Tunggu proses selesai
-
----
-
-#### **Langkah 3: Upload & Setup Project**
-
-**3.1. Upload file project**
-
-Jika belum upload, gunakan rsync:
-```bash
-# Dari komputer lokal
-rsync -avz --exclude 'node_modules' \
-  /home/yudhavro/Yudhavro/waapivro/ \
-  root@YOUR_VPS_IP:/home/cloudpanel/htdocs/api.yudhavro.com/
-```
-
-Atau via CloudPanel File Manager.
-
-**3.2. SSH ke VPS dan masuk ke folder project**
+**2.1. Navigate ke folder project**
 ```bash
 cd /home/cloudpanel/htdocs/api.yudhavro.com
+pwd
+ls -la
 ```
 
-**3.3. Install dependencies**
+**2.2. Cek file .env sudah ada**
+```bash
+cat .env | head -5
+```
+
+Pastikan semua env vars sudah benar, terutama:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `VITE_WAHA_URL` (set ke `https://api.yudhavro.com` nanti)
+
+---
+
+### **✅ Langkah 3: Install Dependencies & Build**
+
+**3.1. Install npm packages**
 ```bash
 npm install
 ```
 
-**3.4. Setup environment variables**
+Tunggu sampai selesai (bisa 2-5 menit).
+
+**3.2. Build frontend production**
 ```bash
-# Copy .env
-cp .env.example .env
-
-# Edit .env
-nano .env
-```
-
-Update values:
-```env
-# Supabase (sama seperti local)
-VITE_SUPABASE_URL=https://qcakpmnmnytrrlhkkski.supabase.co
-VITE_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
-# WAHA (akan running di VPS juga)
-VITE_WAHA_URL=http://localhost:3000
-VITE_WAHA_API_KEY=mysecretkey123
-
-# Tripay (ganti ke production)
-TRIPAY_API_KEY=YOUR_PRODUCTION_API_KEY
-TRIPAY_PRIVATE_KEY=YOUR_PRODUCTION_PRIVATE_KEY
-TRIPAY_MERCHANT_CODE=YOUR_MERCHANT_CODE
-TRIPAY_MODE=production
-
-# S3, SMTP (sama seperti local)
-```
-
----
-
-#### **Langkah 4: Build Frontend**
-
-```bash
-# Build production
 npm run build
-
-# Folder dist/ akan berisi static files
-ls -la dist/
 ```
 
----
+Ini akan generate folder `dist/` dengan static files.
 
-#### **Langkah 5: Setup Backend dengan PM2**
+**3.3. Verify build**
+```bash
+ls -la dist/
+# Harus ada: index.html, assets/, dll
+```
 
-**5.1. Build backend**
+**3.4. Build backend**
 ```bash
 npm run build:server
 ```
 
-**5.2. Buat PM2 ecosystem file**
+Ini akan generate folder `dist/server/` dengan compiled TypeScript.
+
+**3.5. Verify backend build**
 ```bash
-nano ecosystem.config.js
+ls -la dist/server/
+# Harus ada: index.js, routes/, lib/, dll
 ```
 
-Isi:
-```javascript
+---
+
+### **✅ Langkah 4: Setup Backend dengan PM2**
+
+**4.1. Buat PM2 ecosystem file**
+```bash
+cat > ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [
     {
       name: 'apivro-backend',
       script: 'dist/server/index.js',
-      instances: 2,
-      exec_mode: 'cluster',
+      instances: 1,
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3001
@@ -201,41 +153,54 @@ module.exports = {
     }
   ]
 };
+EOF
 ```
 
-**5.3. Start backend dengan PM2**
+**4.2. Create logs folder**
 ```bash
-# Create logs folder
 mkdir -p logs
-
-# Start PM2
-pm2 start ecosystem.config.js
-
-# Save PM2 config
-pm2 save
-
-# Setup PM2 startup
-pm2 startup
-# Copy & run command yang muncul
 ```
 
-**5.4. Verify backend running**
+**4.3. Start backend dengan PM2**
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+```
+
+Copy command yang muncul dan jalankan (contoh):
+```bash
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root
+```
+
+**4.4. Verify backend running**
 ```bash
 pm2 status
-pm2 logs apivro-backend
+pm2 logs apivro-backend --lines 20
+```
+
+**4.5. Test backend API**
+```bash
 curl http://localhost:3001/health
+```
+
+Expected response:
+```json
+{"status":"ok","timestamp":"2025-10-24T..."}
 ```
 
 ---
 
-#### **Langkah 6: Setup WAHA Plus**
+### **✅ Langkah 5: Deploy WAHA Plus dengan Docker**
 
-**6.1. Login ke Docker registry**
+**5.1. Login ke WAHA Docker registry**
 ```bash
-docker login -u devlikeapro -p YOUR_WAHA_KEY cr.waha.devlike.pro
+docker login -u devlikeapro -p YOUR_WAHA_SUBSCRIPTION_KEY cr.waha.devlike.pro
 ```
 
-**6.2. Run WAHA Plus**
+Ganti `YOUR_WAHA_SUBSCRIPTION_KEY` dengan key Anda.
+
+**5.2. Pull dan run WAHA Plus**
 ```bash
 docker run -d \
   --name waha-plus \
@@ -247,36 +212,58 @@ docker run -d \
   cr.waha.devlike.pro/waha-plus
 ```
 
-**6.3. Verify WAHA running**
+**5.3. Verify WAHA running**
 ```bash
 docker ps | grep waha
+docker logs waha-plus --tail 20
+```
+
+**5.4. Test WAHA API**
+```bash
 curl -H "X-Api-Key: mysecretkey123" http://localhost:3000/api/sessions
 ```
 
+Expected response:
+```json
+[]
+```
+(Empty array karena belum ada session)
+
 ---
 
-#### **Langkah 7: Setup Nginx Reverse Proxy**
+### **✅ Langkah 6: Konfigurasi Nginx (CloudPanel)**
 
-**7.1. Buat Nginx config**
+CloudPanel sudah punya Nginx, kita tinggal update konfigurasinya.
+
+**6.1. Cari file Nginx config untuk domain Anda**
 ```bash
-nano /etc/nginx/sites-available/api.yudhavro.com
+ls -la /etc/nginx/sites-enabled/ | grep api.yudhavro.com
 ```
 
-Isi:
+**6.2. Backup config lama**
+```bash
+cp /etc/nginx/sites-enabled/api.yudhavro.com.conf /etc/nginx/sites-enabled/api.yudhavro.com.conf.backup
+```
+
+**6.3. Edit Nginx config**
+```bash
+nano /etc/nginx/sites-enabled/api.yudhavro.com.conf
+```
+
+**6.4. Ganti isi file dengan config ini:**
 ```nginx
-# Frontend (Static Files)
 server {
     listen 80;
-    listen 443 ssl http2;
+    listen [::]:80;
     server_name api.yudhavro.com;
-
-    ssl_certificate /etc/letsencrypt/live/api.yudhavro.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.yudhavro.com/privkey.pem;
-
+    
+    # Redirect HTTP to HTTPS (akan diaktifkan setelah SSL)
+    # return 301 https://$server_name$request_uri;
+    
     root /home/cloudpanel/htdocs/api.yudhavro.com/dist;
     index index.html;
 
-    # Frontend routes
+    # Frontend (React SPA)
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -292,446 +279,347 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 300s;
     }
 
-    # WAHA API (optional, jika ingin expose)
-    location /waha/ {
-        proxy_pass http://localhost:3000/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+    # Health check
+    location /health {
+        proxy_pass http://localhost:3001/health;
     }
-}
-
-# Redirect HTTP to HTTPS
-server {
-    listen 80;
-    server_name api.yudhavro.com;
-    return 301 https://$server_name$request_uri;
 }
 ```
 
-**7.2. Enable site**
+**6.5. Test Nginx config**
 ```bash
-ln -s /etc/nginx/sites-available/api.yudhavro.com /etc/nginx/sites-enabled/
 nginx -t
+```
+
+Harus muncul: `syntax is ok` dan `test is successful`
+
+**6.6. Reload Nginx**
+```bash
 systemctl reload nginx
 ```
 
----
-
-#### **Langkah 8: Update n8n Webhook**
-
-**8.1. Update webhook URL di n8n**
-
-Ganti dari ngrok ke domain production:
-```
-https://api.yudhavro.com/api/v1/webhooks/incoming
-```
-
-**8.2. Update API endpoint di n8n**
-
-Untuk send message:
-```
-https://api.yudhavro.com/api/v1/messages/send
-```
-
----
-
-#### **Langkah 9: Test Production**
-
-**9.1. Test frontend**
+**6.7. Test akses domain**
 ```bash
-curl https://api.yudhavro.com
+curl http://api.yudhavro.com
 ```
 
-**9.2. Test backend API**
+Seharusnya sekarang tidak blank lagi!
+
+---
+
+### **✅ Langkah 7: Test Production**
+
+**7.1. Test frontend**
+
+Buka browser: `https://api.yudhavro.com`
+
+Seharusnya muncul halaman login API VRO (tidak blank lagi).
+
+**7.2. Test backend health**
+```bash
+curl https://api.yudhavro.com/health
+```
+
+Expected:
+```json
+{"status":"ok","timestamp":"..."}
+```
+
+**7.3. Test backend API**
 ```bash
 curl https://api.yudhavro.com/api/v1/health
 ```
 
-**9.3. Test send message**
+**7.4. Login dan test di browser**
+- Buka `https://api.yudhavro.com`
+- Login dengan Google/GitHub
+- Cek dashboard
+- Test add device (scan QR code)
+- Test create API key
+
+**7.5. Verify semua service running**
 ```bash
-curl -X POST https://api.yudhavro.com/api/v1/messages/send \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "to": "628123456789",
-    "message": "Test from production!"
-  }'
+# Check PM2
+pm2 status
+
+# Check Docker
+docker ps | grep waha
+
+# Check Nginx
+systemctl status nginx
 ```
 
 ---
 
-## 🚀 Opsi 2: Railway + Vercel (Recommended)
+## 🎯 Selesai! Service Sudah Berjalan
 
-### **Keuntungan:**
-- ✅ Setup super mudah (5-10 menit)
-- ✅ Auto-scaling
-- ✅ Free tier tersedia
-- ✅ CI/CD otomatis
-- ✅ Monitoring built-in
-- ✅ Zero downtime deployment
+Jika semua langkah di atas berhasil, maka:
 
-### **Biaya:**
-- **Railway**: $5/bulan (500 hours) atau $20/bulan (unlimited)
-- **Vercel**: Free untuk hobby, $20/bulan untuk pro
-- **Total**: ~$5-25/bulan
+- ✅ Frontend accessible di `https://api.yudhavro.com`
+- ✅ Backend API running di port 3001
+- ✅ WAHA Plus running di port 3000
+- ✅ Nginx reverse proxy configured
+- ✅ PM2 managing backend process
+- ✅ Docker managing WAHA Plus
 
----
-
-### **📋 Setup Step-by-Step**
-
-#### **Langkah 1: Deploy Backend ke Railway**
-
-**1.1. Push code ke GitHub**
-```bash
-cd /home/yudhavro/Yudhavro/waapivro
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/waapivro.git
-git push -u origin main
-```
-
-**1.2. Deploy ke Railway**
-- Pergi ke: https://railway.app
-- Login dengan GitHub
-- Klik **New Project**
-- Pilih **Deploy from GitHub repo**
-- Pilih repository `waapivro`
-- Railway akan auto-detect dan deploy
-
-**1.3. Setup environment variables**
-
-Di Railway dashboard:
-- Klik project → **Variables**
-- Add semua env vars dari `.env`:
-  ```
-  VITE_SUPABASE_URL=...
-  VITE_SUPABASE_ANON_KEY=...
-  SUPABASE_SERVICE_ROLE_KEY=...
-  WAHA_URL=... (akan setup nanti)
-  PORT=3001
-  ```
-
-**1.4. Setup custom domain**
-- Di Railway, klik **Settings** → **Domains**
-- Add domain: `api.yudhavro.com`
-- Update DNS:
-  ```
-  Type: CNAME
-  Name: api
-  Value: [railway-provided-domain]
-  ```
-
----
-
-#### **Langkah 2: Deploy WAHA Plus ke Railway**
-
-**2.1. Buat service baru**
-- Di Railway project, klik **New**
-- Pilih **Docker Image**
-- Image: `cr.waha.devlike.pro/waha-plus`
-- Port: `3000`
-
-**2.2. Add environment variables**
-```
-WAHA_API_KEY=mysecretkey123
-WHATSAPP_DEFAULT_ENGINE=WEBJS
-```
-
-**2.3. Add volume untuk sessions**
-- Di service settings → **Volumes**
-- Mount path: `/app/.sessions`
-
-**2.4. Get WAHA URL**
-- Railway akan generate URL: `waha-plus.railway.app`
-- Update backend env var:
-  ```
-  WAHA_URL=https://waha-plus.railway.app
-  ```
-
----
-
-#### **Langkah 3: Deploy Frontend ke Vercel**
-
-**3.1. Install Vercel CLI**
-```bash
-npm install -g vercel
-```
-
-**3.2. Deploy**
-```bash
-cd /home/yudhavro/Yudhavro/waapivro
-vercel
-```
-
-Follow prompts:
-- Setup and deploy: **Yes**
-- Scope: Your account
-- Link to existing project: **No**
-- Project name: `apivro`
-- Directory: `./`
-- Override settings: **No**
-
-**3.3. Setup environment variables**
-```bash
-vercel env add VITE_SUPABASE_URL
-vercel env add VITE_SUPABASE_ANON_KEY
-vercel env add VITE_WAHA_URL
-```
-
-**3.4. Setup custom domain**
-```bash
-vercel domains add api.yudhavro.com
-```
-
-Update DNS:
-```
-Type: CNAME
-Name: api
-Value: cname.vercel-dns.com
-```
-
----
-
-#### **Langkah 4: Update n8n**
-
-Update URLs di n8n workflows:
-- Backend API: `https://api.yudhavro.com/api/v1/messages/send`
-- Webhook: `https://api.yudhavro.com/api/v1/webhooks/incoming`
-
----
-
-## 🐳 Opsi 3: Docker VPS Manual
-
-### **Setup dengan Docker Compose**
-
-**3.1. Buat docker-compose.yml**
-```yaml
-version: '3.8'
-
-services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=production
-      - PORT=3001
-    env_file:
-      - .env
-    restart: unless-stopped
-
-  waha-plus:
-    image: cr.waha.devlike.pro/waha-plus
-    ports:
-      - "3000:3000"
-    environment:
-      - WAHA_API_KEY=mysecretkey123
-      - WHATSAPP_DEFAULT_ENGINE=WEBJS
-    volumes:
-      - waha_sessions:/app/.sessions
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./dist:/usr/share/nginx/html
-      - ./certbot/conf:/etc/letsencrypt
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-volumes:
-  waha_sessions:
-```
-
-**3.2. Deploy**
-```bash
-docker-compose up -d
-```
-
----
-
-## 💰 Perbandingan Biaya Detail
-
-### **CloudPanel VPS**
-| Item | Biaya |
-|------|-------|
-| VPS 2GB RAM | Rp 100k/bulan |
-| VPS 4GB RAM | Rp 200k/bulan |
-| VPS 8GB RAM | Rp 500k/bulan |
-| Domain | Rp 150k/tahun |
-| **Total** | **Rp 100-500k/bulan** |
-
-**Pros:**
-- Full control
-- Bisa host banyak project
-- Hemat jangka panjang
-
-**Cons:**
-- Perlu maintenance
-- Setup kompleks
-
----
-
-### **Railway + Vercel**
-| Item | Biaya |
-|------|-------|
-| Railway Hobby | $5/bulan |
-| Railway Pro | $20/bulan |
-| Vercel Hobby | $0 |
-| Vercel Pro | $20/bulan |
-| **Total** | **$5-40/bulan** |
-
-**Pros:**
-- Zero maintenance
-- Auto-scaling
-- CI/CD otomatis
-- Monitoring built-in
-
-**Cons:**
-- Biaya naik seiring traffic
-- Less control
-
----
-
-### **Render.com (Alternative)**
-| Item | Biaya |
-|------|-------|
-| Web Service | $7/bulan |
-| Database (optional) | $7/bulan |
-| **Total** | **$7-14/bulan** |
-
----
-
-## 🎯 Rekomendasi
-
-### **Untuk Startup/MVP:**
-**Railway + Vercel** ⭐⭐⭐⭐⭐
-- Setup cepat
-- Fokus ke product, bukan infrastructure
-- Scale otomatis
-
-### **Untuk Long-term/Scale:**
-**CloudPanel VPS** ⭐⭐⭐⭐
-- Hemat biaya jangka panjang
-- Full control
-- Bisa host multiple projects
-
-### **Untuk Simplicity:**
-**Render.com** ⭐⭐⭐⭐
-- Balance antara ease & cost
-- Good for small-medium scale
+### **Next Steps (Optional):**
+- Setup monitoring (UptimeRobot, Sentry)
+- Configure backup strategy
+- Setup n8n integration (lihat N8N-INTEGRATION-GUIDE.md)
+- Update Tripay to production mode
+- Add more devices
 
 ---
 
 ## ✅ Post-Deployment Checklist
 
-### **Security**
-- [ ] Enable HTTPS/SSL
-- [ ] Setup firewall (UFW)
-- [ ] Change default SSH port
-- [ ] Disable root login
-- [ ] Setup fail2ban
-- [ ] Enable Supabase RLS policies
-- [ ] Rotate API keys
-- [ ] Setup CORS properly
-
-### **Monitoring**
-- [ ] Setup uptime monitoring (UptimeRobot)
-- [ ] Setup error tracking (Sentry)
-- [ ] Setup log aggregation
-- [ ] Monitor disk usage
-- [ ] Monitor memory usage
-- [ ] Setup alerts
-
-### **Backup**
-- [ ] Database backup (Supabase auto-backup)
-- [ ] WAHA sessions backup
-- [ ] Environment variables backup
-- [ ] Code backup (GitHub)
-
-### **Performance**
-- [ ] Enable Gzip compression
-- [ ] Setup CDN (Cloudflare)
-- [ ] Optimize images
-- [ ] Enable caching
-- [ ] Database indexing
+### **Service Status**
+- [ ] PM2 backend running
+- [ ] Docker WAHA Plus running
+- [ ] Nginx running
+- [ ] Frontend accessible via browser
+- [ ] Backend API responding
+- [ ] Can login with Google/GitHub
+- [ ] Can add WhatsApp device
+- [ ] Can create API key
 
 ### **Testing**
-- [ ] Test all API endpoints
-- [ ] Test WhatsApp send/receive
-- [ ] Test payment flow
-- [ ] Test webhook delivery
-- [ ] Load testing
+- [ ] Test send message via API
+- [ ] Test receive message
+- [ ] Test dashboard statistics
+- [ ] Test device connection status
 
 ---
 
-## 🔧 Maintenance Tasks
+---
 
-### **Daily**
-- Check PM2/Docker logs
-- Monitor error rates
-- Check disk space
+## 🎯 Quick Commands Reference
 
-### **Weekly**
-- Review performance metrics
-- Check security alerts
-- Update dependencies
+### **Monitoring**
+```bash
+# Check all services
+pm2 status
+docker ps
+systemctl status nginx
 
-### **Monthly**
-- Backup verification
-- Security audit
-- Cost optimization review
+# View logs
+pm2 logs apivro-backend --lines 50
+docker logs waha-plus --tail 50
+tail -f /var/log/nginx/error.log
+
+# Check disk space
+df -h
+
+# Check memory
+free -h
+```
+
+### **Restart Services**
+```bash
+# Restart backend
+pm2 restart apivro-backend
+
+# Restart WAHA
+docker restart waha-plus
+
+# Restart Nginx
+systemctl restart nginx
+```
+
+### **Update Code**
+```bash
+cd /home/cloudpanel/htdocs/api.yudhavro.com
+
+# Pull latest code (jika pakai git)
+git pull
+
+# Install dependencies
+npm install
+
+# Rebuild
+npm run build
+npm run build:server
+
+# Restart backend
+pm2 restart apivro-backend
+```
 
 ---
 
 ## 🆘 Troubleshooting
 
-### **Backend tidak bisa akses**
+### **Problem: Domain blank putih**
+
+**Solusi:**
+```bash
+# Cek apakah dist/ folder ada
+ls -la /home/cloudpanel/htdocs/api.yudhavro.com/dist/
+
+# Jika tidak ada, build frontend
+cd /home/cloudpanel/htdocs/api.yudhavro.com
+npm run build
+
+# Reload nginx
+systemctl reload nginx
+```
+
+### **Problem: Backend tidak bisa akses**
+
+**Solusi:**
 ```bash
 # Check PM2 status
 pm2 status
-pm2 logs apivro-backend
+pm2 logs apivro-backend --lines 50
 
 # Check port
 netstat -tulpn | grep 3001
 
-# Restart
+# Restart backend
+pm2 restart apivro-backend
+
+# Jika masih error, rebuild
+cd /home/cloudpanel/htdocs/api.yudhavro.com
+npm run build:server
 pm2 restart apivro-backend
 ```
 
-### **WAHA Plus error**
+### **Problem: WAHA Plus error**
+
+**Solusi:**
 ```bash
 # Check Docker logs
-docker logs waha-plus
+docker logs waha-plus --tail 100
 
-# Restart
+# Restart WAHA
 docker restart waha-plus
 
-# Check sessions
-ls -la /var/waha_sessions/
+# Jika masih error, stop dan remove
+docker stop waha-plus
+docker rm waha-plus
+
+# Run ulang
+docker run -d \
+  --name waha-plus \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -e WAHA_API_KEY=mysecretkey123 \
+  -e WHATSAPP_DEFAULT_ENGINE=WEBJS \
+  -v /var/waha_sessions:/app/.sessions \
+  cr.waha.devlike.pro/waha-plus
 ```
 
-### **SSL certificate error**
+### **Problem: SSL certificate error**
+
+**Solusi:**
 ```bash
+# Check certificate
+certbot certificates
+
 # Renew certificate
 certbot renew
 
 # Reload nginx
 systemctl reload nginx
 ```
+
+### **Problem: Nginx error**
+
+**Solusi:**
+```bash
+# Test config
+nginx -t
+
+# Check error log
+tail -f /var/log/nginx/error.log
+
+# Restart nginx
+systemctl restart nginx
+```
+
+### **Problem: Out of disk space**
+
+**Solusi:**
+```bash
+# Check disk usage
+df -h
+
+# Clean npm cache
+npm cache clean --force
+
+# Clean Docker
+docker system prune -a
+
+# Clean PM2 logs
+pm2 flush
+```
+
+---
+
+## ✅ Post-Deployment Checklist
+
+### **Security**
+- [ ] SSL certificate installed dan active
+- [ ] Firewall configured (UFW)
+- [ ] SSH key-based authentication
+- [ ] Disable root login (optional)
+- [ ] Update .env dengan production values
+- [ ] Rotate API keys
+- [ ] Setup CORS properly
+
+### **Monitoring**
+- [ ] PM2 running dan auto-start enabled
+- [ ] Docker containers running
+- [ ] Nginx running
+- [ ] Setup uptime monitoring (UptimeRobot)
+- [ ] Setup error tracking (Sentry - optional)
+
+### **Backup**
+- [ ] Database backup (Supabase auto-backup)
+- [ ] WAHA sessions backup strategy
+- [ ] Environment variables documented
+- [ ] Code in GitHub
+
+### **Testing**
+- [ ] Frontend accessible via HTTPS
+- [ ] Backend API working
+- [ ] WAHA Plus running
+- [ ] WhatsApp device can connect
+- [ ] Send message working
+- [ ] Webhook delivery working
+- [ ] n8n integration working
+- [ ] Payment flow (if production Tripay)
+
+### **Performance**
+- [ ] Gzip compression enabled
+- [ ] Static assets cached
+- [ ] Database indexes optimized
+- [ ] PM2 cluster mode (optional)
+
+---
+
+## 📊 Monitoring & Maintenance
+
+### **Daily Tasks**
+- Check PM2 status: `pm2 status`
+- Check Docker status: `docker ps`
+- Check disk space: `df -h`
+- Review error logs
+
+### **Weekly Tasks**
+- Review PM2 logs for errors
+- Check WAHA sessions backup
+- Monitor API usage
+- Review performance metrics
+
+### **Monthly Tasks**
+- Update dependencies: `npm update`
+- Security audit
+- Cost optimization review
+- Backup verification
+- SSL certificate check (auto-renews)
 
 ---
 
