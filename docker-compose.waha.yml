@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  waha:
+    image: devlikeapro/waha
+    container_name: waha
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Optional: Set webhook URL for all sessions
+      # - WHATSAPP_HOOK_URL=https://your-webhook-url.com
+      # - WHATSAPP_HOOK_EVENTS=message,session.status
+      
+      # Optional: API Key for securing WAHA endpoints
+      # - WHATSAPP_API_KEY=your-secret-api-key
+      
+      # Optional: Enable debug logging
+      # - DEBUG=1
+      
+      # Session storage
+      - WHATSAPP_SESSIONS_FOLDER=/app/.sessions
+    volumes:
+      # Persist WhatsApp sessions across container restarts
+      - waha_sessions:/app/.sessions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  waha_sessions:
+    driver: local

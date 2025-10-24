@@ -1,0 +1,149 @@
+{
+  "info": {
+    "name": "API VRO - WhatsApp API",
+    "description": "Complete API collection for testing API VRO endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Send Text Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"628123456789\",\n  \"message\": \"Hello from API VRO! This is a test message.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/messages/send",
+              "host": ["{{base_url}}"],
+              "path": ["messages", "send"]
+            },
+            "description": "Send a text message to a WhatsApp number"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Media Message (Image)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"628123456789\",\n  \"message\": \"Check out this image!\",\n  \"media\": {\n    \"url\": \"https://picsum.photos/800/600\",\n    \"mimetype\": \"image/jpeg\",\n    \"filename\": \"test-image.jpg\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/messages/send",
+              "host": ["{{base_url}}"],
+              "path": ["messages", "send"]
+            },
+            "description": "Send an image with caption"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Media Message (Document)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"628123456789\",\n  \"message\": \"Here's your document\",\n  \"media\": {\n    \"url\": \"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf\",\n    \"mimetype\": \"application/pdf\",\n    \"filename\": \"document.pdf\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/messages/send",
+              "host": ["{{base_url}}"],
+              "path": ["messages", "send"]
+            },
+            "description": "Send a PDF document"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Message Quota",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/messages/quota",
+              "host": ["{{base_url}}"],
+              "path": ["messages", "quota"]
+            },
+            "description": "Get current message quota and usage"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["health"]
+        },
+        "description": "Check if API server is running"
+      },
+      "response": []
+    }
+  ]
+}
