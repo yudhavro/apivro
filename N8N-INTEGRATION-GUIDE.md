@@ -1,185 +1,84 @@
 # 🔗 Panduan Integrasi API VRO dengan n8n
 
-## 🚀 Quick Start Checklist
+## 🚀 Quick Start
 
-**Untuk Anda yang sudah punya n8n online (flow.yudhavro.com):**
+**Prerequisites:**
+- ✅ API VRO sudah running di production (`https://api.yudhavro.com`)
+- ✅ n8n instance sudah online (`https://flow.yudhavro.com`)
+- ✅ WhatsApp device sudah connected
 
-- [ ] **1. Paste Webhook URL dari n8n ke API VRO**
-  - Copy webhook URL dari n8n
-  - Edit device di API VRO → Paste webhook URL
-  - Test webhook
-  
-- [ ] **2. Buat API Key di API VRO**
-  - Pergi ke API Keys page
-  - Create new key untuk n8n
-  - Copy & simpan API key
-  
-- [ ] **3. Setup ngrok (untuk send message dari n8n)**
-  - Install ngrok: `sudo snap install ngrok`
-  - Run: `ngrok http 3001`
-  - Copy ngrok URL untuk n8n
-  
-- [ ] **4. Setup AI API Keys**
-  - DeepSeek: https://platform.deepseek.com
-  - Gemini: https://makersuite.google.com/app/apikey
-  
-- [ ] **5. Buat Workflow Chatbot di n8n**
-  - Ikuti panduan lengkap di section [Chatbot AI](#chatbot-ai-dengan-deepseek--gemini)
-  
-- [ ] **6. Test Chatbot**
-  - Kirim: `@deepseek Halo`
-  - Kirim: `@gemini Halo`
+**Langkah Cepat:**
 
-**Lanjut ke panduan lengkap di bawah** ⬇️
+1. **Setup Webhook** - Paste webhook URL dari n8n ke device API VRO
+2. **Buat API Key** - Generate API key di API VRO untuk n8n
+3. **Buat Workflow** - Setup automation di n8n
+4. **Test** - Kirim pesan WhatsApp untuk trigger workflow
 
 ---
 
 ## 📋 Daftar Isi
-- [Quick Start Checklist](#quick-start-checklist)
-- [Pengenalan](#pengenalan)
-- [Apakah Bisa Testing di Localhost?](#apakah-bisa-testing-di-localhost)
-- [Setup n8n](#setup-n8n-online-flowyudhavrocom)
-- [Integrasi dengan API VRO](#integrasi-api-vro-dengan-n8n-online)
-- [Chatbot AI dengan DeepSeek & Gemini](#chatbot-ai-dengan-deepseek--gemini)
-- [Workflow Examples](#workflow-examples-lainnya)
+- [Setup Webhook](#1-setup-webhook-dari-n8n)
+- [Buat API Key](#2-buat-api-key-di-api-vro)
+- [Chatbot AI dengan DeepSeek & Gemini](#3-chatbot-ai-dengan-deepseek--gemini)
+- [Workflow Examples](#4-workflow-examples-lainnya)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## 🎯 Pengenalan
+## 🎯 Apa yang Bisa Dibuat?
 
-**API VRO** adalah platform SaaS WhatsApp API yang memungkinkan Anda mengirim dan menerima pesan WhatsApp melalui API. Dengan integrasi n8n, Anda dapat membuat automasi powerful seperti:
+Dengan integrasi n8n, Anda dapat membuat automasi seperti:
 
-- 📨 Auto-reply pesan WhatsApp
-- 🤖 Chatbot dengan AI
-- 📊 Kirim notifikasi dari database/CRM
-- 🔄 Sinkronisasi data antar platform
-- 📧 Forward pesan WhatsApp ke email/Telegram/Discord
+- 🤖 **Chatbot AI** - Auto-reply dengan DeepSeek/Gemini
+- 📨 **Auto-reply** - Balas otomatis berdasarkan keyword
+- 📊 **Notifikasi** - Kirim alert dari database/CRM
+- 🔄 **Sinkronisasi** - Sync data antar platform
+- 📧 **Forward** - Teruskan pesan ke email/Telegram/Discord
 
 ---
 
-## ✅ Apakah Bisa Testing di Localhost?
-
-### **JAWABAN: YA, BISA! 🎉**
-
-Anda **BISA** menggunakan n8n online (cloud) dengan API VRO yang masih di localhost. Ada 2 skenario:
-
-### **Skenario 1: n8n Online + API VRO Localhost** ⭐ (RECOMMENDED)
+## 📐 Arsitektur Production
 
 ```
 WhatsApp Message
     ↓
-WAHA Plus (localhost:3000)
+WAHA Plus (api.yudhavro.com:3000)
     ↓
-API VRO Backend (localhost:3001)
+API VRO Backend (api.yudhavro.com:3001)
     ↓
-n8n Webhook (flow.yudhavro.com) ← ONLINE
-    ↓
-Your Automation Workflow
-```
-
-**Cara Kerja:**
-- API VRO di localhost **BISA** kirim webhook ke n8n online
-- n8n online **BISA** kirim balik ke API VRO localhost
-- Menggunakan **ngrok/cloudflare tunnel** TIDAK diperlukan untuk webhook keluar
-- Hanya perlu expose API VRO jika n8n perlu call balik (opsional)
-
-**Keuntungan:**
-- ✅ n8n selalu online 24/7
-- ✅ Webhook tidak hilang saat komputer sleep
-- ✅ Bisa akses workflow dari mana saja
-- ✅ Cocok untuk development & production
-
-### **Skenario 2: Semua di Localhost**
-
-```
-WhatsApp Message
-    ↓
-WAHA Plus (localhost:3000)
-    ↓
-API VRO Backend (localhost:3001)
-    ↓
-n8n Webhook (localhost:5678)
+n8n Webhook (flow.yudhavro.com)
     ↓
 Your Automation Workflow
+    ↓
+n8n HTTP Request
+    ↓
+API VRO Send Message (api.yudhavro.com/api/v1/messages/send)
+    ↓
+WhatsApp Reply
 ```
 
-**Syarat:**
-- Semua service berjalan di komputer yang sama
-- Webhook URL: `http://localhost:5678/webhook/...`
-
-**Untuk panduan ini, kita fokus ke Skenario 1 (n8n Online)** ⭐
+**Semua service sudah production, tidak perlu ngrok!** ✅
 
 ---
 
-## 🚀 Setup n8n Online (flow.yudhavro.com)
+## 1️⃣ Setup Webhook dari n8n
 
-### **✅ Anda Sudah Punya n8n Online**
+### **Langkah 1: Buka API VRO Dashboard**
 
-Karena n8n Anda sudah berjalan di **flow.yudhavro.com**, Anda bisa langsung skip ke bagian integrasi.
-
-**Akses n8n Anda:**
-- URL: **https://flow.yudhavro.com**
-- Login dengan akun Anda
-
----
-
-## 🚀 Setup n8n Localhost (Opsional)
-
-Jika ingin install n8n di localhost juga:
-
-### **Opsi 1: Docker**
-
-```bash
-docker pull n8nio/n8n
-docker run -d --name n8n -p 5678:5678 -v ~/.n8n:/home/node/.n8n n8nio/n8n
+```
+https://api.yudhavro.com
 ```
 
-### **Opsi 2: NPM**
+### **Langkah 2: Login dengan Google/GitHub**
 
-```bash
-npm install -g n8n
-n8n start
-```
+### **Langkah 3: Pergi ke halaman Devices**
 
-**Akses:** http://localhost:5678
-
----
-
-## 🔧 Integrasi API VRO dengan n8n Online
-
-### **📋 Checklist Persiapan**
-
-Sebelum mulai, pastikan:
-- ✅ API VRO sudah running di localhost (port 5173 & 3001)
-- ✅ WAHA Plus sudah running (port 3000)
-- ✅ Device WhatsApp sudah terkoneksi
-- ✅ Sudah punya akses ke n8n online (flow.yudhavro.com)
-- ✅ Sudah punya webhook URL dari n8n
-
----
-
-## 🎯 Setup Step-by-Step (n8n Online)
-
-### **Langkah 1: Paste Webhook URL dari n8n ke API VRO**
-
-Anda sudah punya webhook URL dari n8n, sekarang tinggal paste ke API VRO:
-
-**1.1. Buka API VRO Dashboard**
-```
-http://localhost:5173
-```
-
-**1.2. Login dengan Google/GitHub**
-
-**1.3. Pergi ke halaman Devices**
-
-**1.4. Pastikan device sudah Connected**
+### **Langkah 4: Pastikan device sudah Connected**
 - Jika belum ada device, klik **Add Device**
 - Scan QR code dengan WhatsApp
 - Tunggu status **Connected**
 
-**1.5. Edit Device untuk Set Webhook URL**
+### **Langkah 5: Edit Device untuk Set Webhook URL**
 - Klik tombol **Edit** (ikon pensil biru) pada device Anda
 - Di field **Webhook URL**, paste URL dari n8n:
   ```
@@ -187,23 +86,23 @@ http://localhost:5173
   ```
 - Klik **Save Changes**
 
-**1.6. Test Webhook**
+### **Langkah 6: Test Webhook**
 - Klik tombol **Test Webhook** (tombol ungu)
 - Cek di n8n apakah webhook diterima
 - Jika berhasil, akan muncul alert sukses dengan response time
 
 ---
 
-### **Langkah 2: Buat API Key untuk Send Message**
+## 2️⃣ Buat API Key di API VRO
 
 n8n perlu API key untuk kirim balik pesan ke WhatsApp:
 
-**2.1. Pergi ke halaman API Keys**
+### **Langkah 1: Pergi ke halaman API Keys**
 ```
-http://localhost:5173/api-keys
+https://api.yudhavro.com/api-keys
 ```
 
-**2.2. Klik Create API Key**
+### **Langkah 2: Klik Create API Key**
 
 **2.3. Isi form:**
 - **Name**: `n8n Chatbot`
@@ -214,145 +113,46 @@ http://localhost:5173/api-keys
 - Format: `apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX`
 - Simpan di tempat aman (notes/password manager)
 
----
+### **Langkah 3: Simpan API Key untuk n8n**
 
-### **Langkah 3: Test Koneksi**
-
-**3.1. Test Webhook dari API VRO ke n8n**
-- Di halaman Devices, klik **Test Webhook**
-- Cek di n8n execution history
-- Payload yang diterima:
-  ```json
-  {
-    "event": "webhook.test",
-    "timestamp": "2025-10-24T...",
-    "device_id": "uuid",
-    "device_name": "My Device",
-    "message": "This is a test webhook from API VRO",
-    "test": true
-  }
-  ```
-
-**3.2. Test Send Message dari n8n ke API VRO**
-
-Di n8n, buat HTTP Request node:
-- **Method**: POST
-- **URL**: `http://YOUR_IP:3001/api/v1/messages/send`
-  - Ganti `YOUR_IP` dengan IP public/ngrok (lihat Langkah 4)
-- **Headers**:
-  ```json
-  {
-    "X-API-Key": "apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "Content-Type": "application/json"
-  }
-  ```
-- **Body**:
-  ```json
-  {
-    "to": "628123456789",
-    "message": "Test dari n8n!"
-  }
-  ```
+API key ini akan digunakan di n8n untuk send message. Format:
+```
+X-API-Key: apivroXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
 
 ---
 
-### **Langkah 4: Expose API VRO untuk n8n (Jika Perlu)**
+## 3️⃣ Chatbot AI dengan DeepSeek & Gemini
 
-Karena n8n online perlu akses ke API VRO localhost untuk send message, ada 2 opsi:
-
-#### **Opsi A: Menggunakan ngrok (Recommended untuk Testing)** ⭐
-
-```bash
-# Install ngrok
-# Download dari: https://ngrok.com/download
-
-# Expose port 3001
-ngrok http 3001
-```
-
-Anda akan dapat URL seperti:
-```
-https://abc123.ngrok.io
-```
-
-Gunakan URL ini di n8n untuk send message:
-```
-https://abc123.ngrok.io/api/v1/messages/send
-```
-
-#### **Opsi B: Menggunakan IP Public + Port Forwarding**
-
-1. Cek IP public Anda: https://whatismyipaddress.com
-2. Setup port forwarding di router untuk port 3001
-3. Gunakan IP public di n8n:
-   ```
-   http://YOUR_PUBLIC_IP:3001/api/v1/messages/send
-   ```
-
-#### **Opsi C: Deploy API VRO ke Cloud (Production)**
-
-Jika untuk production, deploy ke:
-- Railway.app
-- Render.com
-- Vercel (frontend) + Railway (backend)
-
----
-
-### **Langkah 5: Test dengan Pesan WhatsApp Real**
-
-**5.1. Kirim pesan WhatsApp**
-- Kirim pesan ke nomor yang terkoneksi
-- Contoh: "Halo bot"
-
-**5.2. Cek di n8n**
-- Buka n8n execution history
-- Lihat webhook yang masuk dengan payload:
-  ```json
-  {
-    "event": "message.received",
-    "timestamp": "2025-10-24T...",
-    "device_id": "uuid",
-    "device_name": "My Device",
-    "phone_number": "+628123456789",
-    "data": {
-      "id": "message-id",
-      "from": "628987654321@c.us",
-      "body": "Halo bot",
-      "type": "text"
-    }
-  }
-  ```
-
-**5.3. Verifikasi bot reply**
-- Jika workflow sudah setup, bot akan auto-reply
-- Cek WhatsApp untuk balasan dari bot
-
----
-
----
-
-## 🤖 Chatbot AI dengan DeepSeek & Gemini
-
-### **Setup Chatbot AI Multi-Model**
-
-Workflow ini akan membuat chatbot WhatsApp yang bisa menggunakan 2 AI:
-- **DeepSeek** - AI model yang powerful dan cost-effective
+Buat chatbot WhatsApp yang bisa menggunakan 2 AI:
+- **DeepSeek** - AI model yang powerful dan cost-effective  
 - **Gemini** - Google AI dengan kemampuan multimodal
 
+### **Langkah 1: Setup AI API Keys**
+
+#### **1.1. DeepSeek API Key**
+- Daftar di: https://platform.deepseek.com
+- Pergi ke API Keys section
+- Generate new API key
+- Copy API key
+
+#### **1.2. Gemini API Key**
+- Pergi ke: https://makersuite.google.com/app/apikey
+- Klik **Create API Key**
+- Copy API key
+
 ---
 
-### **📋 TODO: Setup Chatbot AI Step-by-Step**
+### **Langkah 2: Buat Workflow di n8n**
 
-#### **✅ 1. Paste Webhook URL dari n8n**
-
-**1.1. Di n8n (flow.yudhavro.com):**
-- Buka workflow baru atau yang sudah ada
+#### **2.1. Di n8n (flow.yudhavro.com):**
+- Buka workflow baru
 - Tambah node **Webhook**
 - Set **HTTP Method**: `POST`
-- Set **Path**: `whatsapp-ai-bot` (atau nama lain)
+- Set **Path**: `whatsapp-ai-bot`
 - **Copy Webhook URL** yang muncul
 
-**1.2. Di API VRO (localhost:5173):**
+#### **2.2. Di API VRO (api.yudhavro.com):**
 - Pergi ke **Devices** page
 - Klik **Edit** pada device Anda
 - Paste webhook URL di field **Webhook URL**:
@@ -567,8 +367,7 @@ return [{
 
 Setup untuk kirim balasan:
 - **Method**: POST
-- **URL**: `http://YOUR_NGROK_URL/api/v1/messages/send`
-  - Atau: `https://abc123.ngrok.io/api/v1/messages/send`
+- **URL**: `https://api.yudhavro.com/api/v1/messages/send`
 - **Headers**:
   ```json
   {
@@ -607,65 +406,33 @@ return [{
 
 ---
 
-#### **✅ 5. Setup ngrok untuk Expose API VRO**
+### **Langkah 3: Test Chatbot**
 
-Karena n8n online perlu kirim balik ke API VRO localhost:
-
-**5.1. Install ngrok:**
-```bash
-# Download dari: https://ngrok.com/download
-# Atau dengan snap:
-sudo snap install ngrok
-```
-
-**5.2. Authenticate ngrok:**
-```bash
-ngrok config add-authtoken YOUR_NGROK_TOKEN
-```
-
-**5.3. Expose port 3001:**
-```bash
-ngrok http 3001
-```
-
-**5.4. Copy ngrok URL:**
-- Akan muncul URL seperti: `https://abc123.ngrok.io`
-- Copy URL ini
-- Paste di n8n Node 7 (HTTP Request Send Reply)
-
----
-
-#### **✅ 6. Test Chatbot**
-
-**6.1. Test dengan DeepSeek:**
+**3.1. Test dengan DeepSeek:**
 - Kirim pesan WhatsApp: `@deepseek Apa itu AI?`
 - Bot akan reply dengan jawaban dari DeepSeek
 
-**6.2. Test dengan Gemini:**
+**3.2. Test dengan Gemini:**
 - Kirim pesan WhatsApp: `@gemini Jelaskan tentang machine learning`
 - Bot akan reply dengan jawaban dari Gemini
 
-**6.3. Test default (tanpa mention):**
+**3.3. Test default (tanpa mention):**
 - Kirim pesan WhatsApp: `Halo, siapa kamu?`
 - Bot akan reply dengan DeepSeek (default)
 
 ---
 
-#### **✅ 7. Monitor & Debug**
+### **Langkah 4: Monitor & Debug**
 
-**7.1. Di n8n:**
+**4.1. Di n8n:**
 - Buka **Executions** tab
 - Lihat history semua webhook
 - Klik execution untuk detail
 
-**7.2. Di API VRO:**
+**4.2. Di API VRO:**
 - Pergi ke **Devices** → **Webhook Activity**
 - Lihat logs webhook calls
 - Check success/failure rate
-
-**7.3. Di Terminal (ngrok):**
-- Lihat request logs real-time
-- Monitor traffic
 
 ---
 
